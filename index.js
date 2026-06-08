@@ -209,7 +209,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     const safeName = member.user.username.toLowerCase().replace(/[^a-z0-9가-힣]/g, '').slice(0, 12) || 'user';
-    const channelName = `${option.value.toLowerCase()}-${safeName}-${member.user.id.slice(-4)}`;
+    const channelName = `${option.value.toLowerCase()}-${safeName}`;
     const ticketNum = String(ticketCounter).padStart(4, '0');
 
     const ticketChannel = await guild.channels.create({
@@ -338,10 +338,15 @@ async function sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId
         name: '⌨️ 문의 명령어 안내',
         value: [
           '> `.느린문의 [초]` — 채널 슬로우모드 설정 (예: `.느린문의 30`)',
-          '> `.계좌안내` — 전체 계좌 정보 전송',
+          '> `.계좌안내` — 전체 계좌 정보 전송 (입금멘트 포함)',
           '> `.수콩계좌` / `.바른각계좌` / `.현성계좌` / `.인찬계좌` — 개별 계좌 전송',
           '> `.결제동의서` — 결제동의서 링크 전송',
         ].join('\n'),
+        inline: false,
+      },
+      {
+        name: '💬 입금 안내 멘트',
+        value: '> 계좌 전송 시 자동으로 아래 멘트가 함께 전송됩니다.\n> "입금내역을 캡쳐해서 고객센터로 첨부 바랍니다!"',
         inline: false,
       },
       { name: '📋 최근 문의 내역', value: recentList, inline: false },
@@ -437,7 +442,6 @@ client.on('messageCreate', async (message) => {
 
     // ! 내부 메시지
     if (content.startsWith('!')) {
-      await message.react('🔕').catch(() => {});
       return;
     }
 
@@ -482,7 +486,7 @@ client.on('messageCreate', async (message) => {
       if (userId) {
         try {
           const user = await client.users.fetch(userId);
-          await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() }).setTitle('💳 계좌 안내').setDescription(accounts).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
+          await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setAuthor({ name: 'Story 고객센터', iconURL: client.user.displayAvatarURL() }).setTitle('💳 계좌 안내').setDescription(accounts + '\n\n> 💬 입금내역을 캡쳐해서 고객센터로 첨부 바랍니다!').setFooter({ text: 'StoryHUB' }).setTimestamp()] });
         } catch {}
       }
       await message.react('💳').catch(() => {});
@@ -500,7 +504,7 @@ client.on('messageCreate', async (message) => {
       if (userId) {
         try {
           const user = await client.users.fetch(userId);
-          await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() }).setTitle('💳 계좌 안내').setDescription(accountMap[content]).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
+          await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setAuthor({ name: 'Story 고객센터', iconURL: client.user.displayAvatarURL() }).setTitle('💳 계좌 안내').setDescription(accountMap[content] + '\n\n> 💬 입금내역을 캡쳐해서 고객센터로 첨부 바랍니다!').setFooter({ text: 'StoryHUB' }).setTimestamp()] });
         } catch {}
       }
       await message.react('💳').catch(() => {});
@@ -513,7 +517,7 @@ client.on('messageCreate', async (message) => {
       if (userId) {
         try {
           const user = await client.users.fetch(userId);
-          await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() }).setTitle('📄 결제동의서').setDescription(`아래 링크를 통해 결제동의서를 확인해주세요.\n\n${link}`).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
+          await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setAuthor({ name: 'Story 고객센터', iconURL: client.user.displayAvatarURL() }).setTitle('📄 결제동의서').setDescription(`아래 링크를 통해 결제동의서를 확인해주세요.\n\n${link}`).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
         } catch {}
       }
       await message.react('📄').catch(() => {});
@@ -526,7 +530,7 @@ client.on('messageCreate', async (message) => {
       const user = await client.users.fetch(userId);
       const fileAttachments = message.attachments.map(a => new AttachmentBuilder(a.url, { name: a.name }));
       await user.send({
-        embeds: [new EmbedBuilder().setColor(0xa78bfa).setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() }).setDescription(message.content || '(첨부파일)').setFooter({ text: 'StoryHUB • 이 메시지에 답장하면 스탭에게 전달됩니다' }).setTimestamp()],
+        embeds: [new EmbedBuilder().setColor(0xa78bfa).setAuthor({ name: 'Story 고객센터', iconURL: client.user.displayAvatarURL() }).setDescription(message.content || '(첨부파일)').setFooter({ text: 'StoryHUB • 이 메시지에 답장하면 스탭에게 전달됩니다' }).setTimestamp()],
         files: fileAttachments.length > 0 ? fileAttachments : [],
       });
       await message.react('📨').catch(() => {});
