@@ -110,10 +110,14 @@ client.on('interactionCreate', async (interaction) => {
       .setColor(0x7c3aed)
       .setTitle('📦 Story HUB 고객센터')
       .setDescription(
-        '## 운영시간 안내\n\n' +
-        '> 평일 14:00 ~ 23:00\n' +
-        '> 주말, 공휴일 11:00 ~ 21:00\n\n' +
-        '> 운영 시간이 아닐 때는 티켓 답변에 시간이 소요될 수 있는 점 양해 부탁드립니다.'
+        '## 고객센터 안내사항\n\n' +
+        '> - 본 고객센터는 서버의 여러 문의를 접수하기 위한 공간입니다. 해당 채널을 악용하여 용도 이외의 방법으로 사용하는 경구 관련 규정에 따라 제재 처리될 수 있습니다.\n' +
+        '> ## 운영시간 안내
+- 평일 **13:00 ~ 23:50**
+- 주말, 공휴일 **10:00~22:00 , 휴무**\n\n' +
+        '> 운영 시간이 아닐 때는 티켓 답변에 시간이 소요될 수 있는 점 양해 부탁드립니다.
+
+- 아래의 항목중 해당되는 카테고리를 선택하여 고객센터 문의를 시작하세요.'
       )
       .setFooter({ text: 'Story HUB • 문의는 언제든지 환영합니다' })
       .setTimestamp();
@@ -283,34 +287,6 @@ client.on('interactionCreate', async (interaction) => {
     ]);
 
     return interaction.editReply({ content: `✅ 문의가 접수되었습니다! DM을 확인해주세요 🩷` });
-  }
-
-  // ── 클레임 ──
-  if (interaction.isButton() && interaction.customId.startsWith('ticket_claim:')) {
-    const member = interaction.member;
-    const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2) || member.roles.cache.has(config.STAFF_ROLE_ID3);
-    if (!isStaff) return interaction.reply({ content: '❌ 스탭만 클레임할 수 있습니다.', flags: 64 });
-    const ticketId = interaction.customId.split(':')[1];
-    await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xf59e0b).setTitle('✋ 티켓 클레임').setDescription(`**${member.user.tag}** 님이 이 티켓을 담당합니다.`).setTimestamp()] });
-    try {
-      await getDb().collection('tickets').doc(ticketId).update({ claimedBy: member.user.tag, claimedById: member.id, claimedAt: new Date().toISOString() });
-    } catch {}
-    logAction(interaction.guild, `✋ 티켓 클레임`, null, 0xf59e0b, [
-      { name: '채널', value: interaction.channel.name, inline: true },
-      { name: '담당자', value: member.user.tag, inline: true },
-    ]);
-    return;
-  }
-
-  // ── 티켓 종료 버튼 ──
-  if (interaction.isButton() && interaction.customId.startsWith('ticket_close:')) {
-    const member = interaction.member;
-    const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2) || member.roles.cache.has(config.STAFF_ROLE_ID3);
-    if (!isStaff) {
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 스탭만 티켓을 종료할 수 있습니다.')], flags: 64 });
-    }
-    const ticketId = interaction.customId.split(':')[1];
-    await closeTicket(interaction.channel, ticketId, member, interaction);
   }
 });
 
