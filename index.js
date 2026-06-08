@@ -33,9 +33,6 @@ initFirebase();
 let ticketCounter = 0;
 const dmMap = new Map();
 
-// ─────────────────────────────────────────────
-// Firestore에서 설정값 가져오기
-// ─────────────────────────────────────────────
 async function getSetting(key) {
   try {
     const doc = await getDb().collection('settings').doc(key).get();
@@ -48,9 +45,6 @@ async function setSetting(key, value) {
   await getDb().collection('settings').doc(key).set({ value });
 }
 
-// ─────────────────────────────────────────────
-// 슬래시 커맨드 등록
-// ─────────────────────────────────────────────
 async function registerCommands() {
   const commands = [
     new SlashCommandBuilder()
@@ -65,7 +59,6 @@ async function registerCommands() {
           .setDescription('변경할 항목')
           .setRequired(true)
           .addChoices(
-            { name: '계좌안내', value: '계좌안내' },
             { name: '결제동의서', value: '결제동의서' },
             { name: '느린문의', value: '느린문의' },
           )
@@ -90,9 +83,6 @@ async function registerCommands() {
   }
 }
 
-// ─────────────────────────────────────────────
-// 봇 준비
-// ─────────────────────────────────────────────
 client.once('clientReady', async () => {
   console.log(`✅ ${client.user.tag} 온라인`);
   await registerCommands();
@@ -108,9 +98,6 @@ client.once('clientReady', async () => {
   }
 });
 
-// ─────────────────────────────────────────────
-// Interaction 핸들러
-// ─────────────────────────────────────────────
 client.on('interactionCreate', async (interaction) => {
 
   // ── /panel ──
@@ -125,8 +112,8 @@ client.on('interactionCreate', async (interaction) => {
       .setDescription(
         '## 운영시간 안내\n\n' +
         '> 평일 14:00 ~ 23:00\n' +
-        '> 주말, 공휴일 11:00~21:00\n\n' +
-        '> 운영 시간이 아닐 때는 티켓 답변에 시간이 소요될 수 있는 점 양해 부탁드립니다.\n' +
+        '> 주말, 공휴일 11:00 ~ 21:00\n\n' +
+        '> 운영 시간이 아닐 때는 티켓 답변에 시간이 소요될 수 있는 점 양해 부탁드립니다.'
       )
       .setFooter({ text: 'Story HUB • 문의는 언제든지 환영합니다' })
       .setTimestamp();
@@ -170,8 +157,7 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
       return interaction.reply({ content: '❌ 관리자만 사용 가능합니다.', ephemeral: true });
     }
-    const [계좌, 동의서, 느린] = await Promise.all([
-      getSetting('계좌안내'),
+    const [동의서, 느린] = await Promise.all([
       getSetting('결제동의서'),
       getSetting('느린문의'),
     ]);
@@ -180,7 +166,6 @@ client.on('interactionCreate', async (interaction) => {
         .setColor(0x7c3aed)
         .setTitle('📋 현재 설정값')
         .addFields(
-          { name: '💳 계좌안내', value: 계좌 || '*(미설정)*', inline: false },
           { name: '📄 결제동의서', value: 동의서 || '*(미설정)*', inline: false },
           { name: '🐢 느린문의', value: 느린 || '*(미설정)*', inline: false },
         )
@@ -190,7 +175,7 @@ client.on('interactionCreate', async (interaction) => {
     });
   }
 
-  // ── Select Menu: 티켓 생성 ──
+  // ── 티켓 버튼 ──
   if (interaction.isButton() && interaction.customId.startsWith('ticket_btn:')) {
     await interaction.deferReply({ flags: 64 });
 
@@ -233,41 +218,19 @@ client.on('interactionCreate', async (interaction) => {
         { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
         {
           id: config.STAFF_ROLE_ID,
-          allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages,
-            PermissionsBitField.Flags.ReadMessageHistory,
-            PermissionsBitField.Flags.AttachFiles,
-            PermissionsBitField.Flags.ManageMessages,
-          ],
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory, PermissionsBitField.Flags.AttachFiles, PermissionsBitField.Flags.ManageMessages],
         },
         {
           id: config.STAFF_ROLE_ID2,
-          allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages,
-            PermissionsBitField.Flags.ReadMessageHistory,
-            PermissionsBitField.Flags.AttachFiles,
-            PermissionsBitField.Flags.ManageMessages,
-          ],
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory, PermissionsBitField.Flags.AttachFiles, PermissionsBitField.Flags.ManageMessages],
         },
         {
           id: config.STAFF_ROLE_ID3,
-          allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages,
-            PermissionsBitField.Flags.ReadMessageHistory,
-            PermissionsBitField.Flags.AttachFiles,
-            PermissionsBitField.Flags.ManageMessages,
-          ],
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory, PermissionsBitField.Flags.AttachFiles, PermissionsBitField.Flags.ManageMessages],
         },
         {
           id: client.user.id,
-          allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages,
-            PermissionsBitField.Flags.ReadMessageHistory,
-          ],
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ReadMessageHistory],
         },
       ],
     });
@@ -275,22 +238,14 @@ client.on('interactionCreate', async (interaction) => {
     dmMap.set(member.id, { ticketId, channelId: ticketChannel.id, type: option.value, typeLabel: option.label });
 
     const ticketData = {
-      ticketId,
-      ticketNumber: ticketCounter,
-      channelId: ticketChannel.id,
-      channelName,
-      type: option.value,
-      typeLabel: option.label,
-      userId: member.id,
-      userTag: member.user.tag,
+      ticketId, ticketNumber: ticketCounter,
+      channelId: ticketChannel.id, channelName,
+      type: option.value, typeLabel: option.label,
+      userId: member.id, userTag: member.user.tag,
       userDisplayName: member.displayName,
-      guildId: guild.id,
-      guildName: guild.name,
-      status: 'open',
-      createdAt: new Date().toISOString(),
-      closedAt: null,
-      closedBy: null,
-      messages: [],
+      guildId: guild.id, guildName: guild.name,
+      status: 'open', createdAt: new Date().toISOString(),
+      closedAt: null, closedBy: null, messages: [],
     };
 
     try {
@@ -299,10 +254,8 @@ client.on('interactionCreate', async (interaction) => {
       console.error('티켓 생성 Firestore 저장 실패:', e);
     }
 
-    // ── 스탭 채널 안내 임베드 (2번째 사진 형식) ──
     await sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId);
 
-    // ── 유저 DM ──
     try {
       const dmEmbed = new EmbedBuilder()
         .setColor(0x7c3aed)
@@ -338,18 +291,9 @@ client.on('interactionCreate', async (interaction) => {
     const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2) || member.roles.cache.has(config.STAFF_ROLE_ID3);
     if (!isStaff) return interaction.reply({ content: '❌ 스탭만 클레임할 수 있습니다.', flags: 64 });
     const ticketId = interaction.customId.split(':')[1];
-    const claimEmbed = new EmbedBuilder()
-      .setColor(0xf59e0b)
-      .setTitle('✋ 티켓 클레임')
-      .setDescription(`**${member.user.tag}** 님이 이 티켓을 담당합니다.`)
-      .setTimestamp();
-    await interaction.reply({ embeds: [claimEmbed] });
+    await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xf59e0b).setTitle('✋ 티켓 클레임').setDescription(`**${member.user.tag}** 님이 이 티켓을 담당합니다.`).setTimestamp()] });
     try {
-      await getDb().collection('tickets').doc(ticketId).update({
-        claimedBy: member.user.tag,
-        claimedById: member.id,
-        claimedAt: new Date().toISOString(),
-      });
+      await getDb().collection('tickets').doc(ticketId).update({ claimedBy: member.user.tag, claimedById: member.id, claimedAt: new Date().toISOString() });
     } catch {}
     logAction(interaction.guild, `✋ 티켓 클레임`, null, 0xf59e0b, [
       { name: '채널', value: interaction.channel.name, inline: true },
@@ -363,10 +307,7 @@ client.on('interactionCreate', async (interaction) => {
     const member = interaction.member;
     const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2) || member.roles.cache.has(config.STAFF_ROLE_ID3);
     if (!isStaff) {
-      return interaction.reply({
-        embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 스탭만 티켓을 종료할 수 있습니다.')],
-        flags: 64,
-      });
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 스탭만 티켓을 종료할 수 있습니다.')], flags: 64 });
     }
     const ticketId = interaction.customId.split(':')[1];
     await closeTicket(interaction.channel, ticketId, member, interaction);
@@ -374,10 +315,9 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 // ─────────────────────────────────────────────
-// 스탭 채널 안내 임베드 전송
+// 스탭 채널 안내 임베드
 // ─────────────────────────────────────────────
 async function sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId) {
-  // 최근 문의 내역 (Firestore에서 해당 유저의 최근 5개)
   let recentList = '없음';
   try {
     const db = getDb();
@@ -387,7 +327,6 @@ async function sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId
       .orderBy('closedAt', 'desc')
       .limit(4)
       .get();
-
     if (!snap.empty) {
       recentList = snap.docs.map(doc => {
         const d = doc.data();
@@ -398,52 +337,43 @@ async function sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId
     }
   } catch {}
 
-  // 안내 임베드
   const guideEmbed = new EmbedBuilder()
     .setColor(0x7c3aed)
-    .setAuthor({
-      name: `${member.displayName} (${member.user.tag})`,
-      iconURL: member.user.displayAvatarURL({ size: 64 }),
-    })
+    .setAuthor({ name: `${member.displayName} (${member.user.tag})`, iconURL: member.user.displayAvatarURL({ size: 64 }) })
     .setTitle('문의 관리 안내')
     .addFields(
       {
         name: '📢 문의 응대 안내',
         value: [
-          '> 텍스트 앞에 `!`을 붙이고 채팅을 친다면 문의자에게 발송이 되지 않습니다. (`예시: ! @GM 도와주세요`)',
-          '> 문의가 밀려 문의를 기다려야 할 경우 `.느린문의`를 입력해 주세요.',
-          '> 항상 친절하고, 정확하게 전달을 중요시 하여야 합니다. 모르는 것이 있다면 담당 개발자 또는 관리자에게 질문 후 답변 부탁드리겠습니다.',
+          '> 텍스트 앞에 `!`을 붙이면 문의자에게 발송되지 않습니다. (`예시: !@GM 도와주세요`)',
+          '> 문의가 밀려 기다려야 할 경우 `.느린문의 [초]`를 입력해 주세요.',
+          '> 항상 친절하고 정확하게 전달해 주세요. 모르는 사항은 담당 개발자 또는 관리자에게 질문 후 답변 부탁드립니다.',
         ].join('\n'),
         inline: false,
       },
       {
         name: '🔒 문의 종료 안내',
         value: [
-          '> `.문의종료`를 입력해 주세요.',
-          '> 위의 문의종료가 정상적으로 작동 되지 않는다면 `.강제종료`를 입력해 주세요.',
+          '> `.문의종료` 를 입력해 주세요.',
+          '> 작동하지 않는다면 `.강제종료` 를 입력해 주세요.',
         ].join('\n'),
         inline: false,
       },
       {
         name: '⌨️ 문의 명령어 안내',
         value: [
-          '> `.느린문의 [초]` — 채널 슬로우모드를 설정합니다. (예: `.느린문의 30`)',
-          '> `.계좌안내` — 전체 계좌 정보를 전송합니다.',
+          '> `.느린문의 [초]` — 채널 슬로우모드 설정 (예: `.느린문의 30`)',
+          '> `.계좌안내` — 전체 계좌 정보 전송',
           '> `.수콩계좌` / `.바른각계좌` / `.현성계좌` / `.인찬계좌` — 개별 계좌 전송',
-          '> `.결제동의서` — 결제동의서 링크를 전송합니다.',
+          '> `.결제동의서` — 결제동의서 링크 전송',
         ].join('\n'),
         inline: false,
       },
-      {
-        name: '📋 최근 문의 내역',
-        value: recentList,
-        inline: false,
-      },
+      { name: '📋 최근 문의 내역', value: recentList, inline: false },
     )
     .setFooter({ text: `StoryHUB • 티켓 #${ticketNum}` })
     .setTimestamp();
 
-  // 스탭 알림 임베드
   const staffEmbed = new EmbedBuilder()
     .setColor(0x7c3aed)
     .setTitle(`${option.emoji} ${option.label} 티켓 #${ticketNum}`)
@@ -459,19 +389,12 @@ async function sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId
     .setFooter({ text: 'StoryHUB' })
     .setTimestamp();
 
-  const closeBtn = new ButtonBuilder()
-    .setCustomId(`ticket_close:${ticketId}`)
-    .setLabel('🔒 티켓 종료')
-    .setStyle(ButtonStyle.Danger);
-
-  const claimBtn = new ButtonBuilder()
-    .setCustomId(`ticket_claim:${ticketId}`)
-    .setLabel('✋ 클레임')
-    .setStyle(ButtonStyle.Secondary);
-
+  const closeBtn = new ButtonBuilder().setCustomId(`ticket_close:${ticketId}`).setLabel('🔒 티켓 종료').setStyle(ButtonStyle.Danger);
+  const claimBtn = new ButtonBuilder().setCustomId(`ticket_claim:${ticketId}`).setLabel('✋ 클레임').setStyle(ButtonStyle.Secondary);
   const btnRow = new ActionRowBuilder().addComponents(claimBtn, closeBtn);
 
-  await ticketChannel.send({ embeds: [staffEmbed], components: [btnRow] });
+  // @here 알림 + 스탭 임베드
+  await ticketChannel.send({ content: '@here', embeds: [staffEmbed], components: [btnRow] });
   await ticketChannel.send({ embeds: [guideEmbed] });
 }
 
@@ -485,16 +408,11 @@ client.on('messageCreate', async (message) => {
   if (message.channel.type === ChannelType.DM) {
     const ticketInfo = dmMap.get(message.author.id);
     if (!ticketInfo) {
-      return message.reply({
-        embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 진행중인 문의가 없습니다.\n서버에서 티켓을 먼저 생성해주세요.')]
-      });
+      return message.reply({ embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 진행중인 문의가 없습니다.\n서버에서 티켓을 먼저 생성해주세요.')] });
     }
 
-    // DM에서 . 명령어 차단
     if (message.content.trim().startsWith('.')) {
-      return message.reply({
-        embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 해당 명령어는 스탭만 사용 가능합니다.')]
-      });
+      return message.reply({ embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 해당 명령어는 스탭만 사용 가능합니다.')] });
     }
 
     const guild = client.guilds.cache.get(config.GUILD_ID);
@@ -504,10 +422,7 @@ client.on('messageCreate', async (message) => {
 
     const relayEmbed = new EmbedBuilder()
       .setColor(0x6366f1)
-      .setAuthor({
-        name: `${message.author.tag} (유저)`,
-        iconURL: message.author.displayAvatarURL({ size: 64 }),
-      })
+      .setAuthor({ name: `${message.author.tag} (유저)`, iconURL: message.author.displayAvatarURL({ size: 64 }) })
       .setDescription(message.content || '(첨부파일)')
       .setTimestamp();
 
@@ -520,21 +435,10 @@ client.on('messageCreate', async (message) => {
       const ticketDoc = await db.collection('tickets').doc(ticketInfo.ticketId).get();
       if (ticketDoc.exists) {
         const msgs = ticketDoc.data().messages || [];
-        msgs.push({
-          authorId: message.author.id,
-          authorTag: message.author.tag,
-          authorAvatar: message.author.displayAvatarURL({ size: 64 }),
-          content: message.content || '',
-          attachments: files,
-          isBot: false,
-          from: 'user',
-          timestamp: new Date().toISOString(),
-        });
+        msgs.push({ authorId: message.author.id, authorTag: message.author.tag, authorAvatar: message.author.displayAvatarURL({ size: 64 }), content: message.content || '', attachments: files, isBot: false, from: 'user', timestamp: new Date().toISOString() });
         await db.collection('tickets').doc(ticketInfo.ticketId).update({ messages: msgs });
       }
-    } catch (e) {
-      console.error('메시지 저장 실패:', e);
-    }
+    } catch (e) { console.error('메시지 저장 실패:', e); }
     return;
   }
 
@@ -554,44 +458,27 @@ client.on('messageCreate', async (message) => {
     const ticketId = channel.topic.match(/ticketId:([a-f0-9-]+)/)?.[1];
     const userId = channel.topic.match(/userId:(\d+)/)?.[1];
 
-    // ── .문의종료 / !종료 ──
+    // .문의종료 / !종료
     if (content === '.문의종료' || content === '!종료') {
       if (ticketId) await closeTicket(channel, ticketId, message.member, null, message);
       return;
     }
 
-    // ── ! 로 시작하면 스탭 내부 메시지 (유저에게 안 보냄) ──
+    // ! 내부 메시지
     if (content.startsWith('!')) {
       await message.react('🔕').catch(() => {});
       return;
     }
 
-    // ── .강제종료 (유저가 서버 나간 경우 등 강제 삭제) ──
+    // .강제종료
     if (content === '.강제종료') {
-      const forceEmbed = new EmbedBuilder()
-        .setColor(0xef4444)
-        .setTitle('⚠️ 강제 종료')
-        .setDescription(`**${message.member.user.tag}** 님이 티켓을 강제 종료합니다.
-잠시 후 채널이 삭제됩니다.`)
-        .setTimestamp();
-      await channel.send({ embeds: [forceEmbed] });
-
-      // Firestore 업데이트
+      await channel.send({ embeds: [new EmbedBuilder().setColor(0xef4444).setTitle('⚠️ 강제 종료').setDescription(`**${message.member.user.tag}** 님이 티켓을 강제 종료합니다.\n잠시 후 채널이 삭제됩니다.`).setTimestamp()] });
       if (ticketId) {
         const logUrl = `${config.WEB_BASE_URL}ticket/${ticketId}`;
         try {
-          await getDb().collection('tickets').doc(ticketId).update({
-            status: 'closed',
-            closedAt: new Date().toISOString(),
-            closedBy: message.member.user.tag,
-            closedById: message.member.id,
-            closeType: 'force',
-            logUrl,
-          });
+          await getDb().collection('tickets').doc(ticketId).update({ status: 'closed', closedAt: new Date().toISOString(), closedBy: message.member.user.tag, closedById: message.member.id, closeType: 'force', logUrl });
         } catch {}
-        // dmMap에서 제거 (userId 기반)
         if (userId) dmMap.delete(userId);
-        // 로그
         logAction(channel.guild, '⚠️ 티켓 강제종료', null, 0xef4444, [
           { name: '채널', value: channel.name, inline: true },
           { name: '닫은 사람', value: message.member.user.tag, inline: true },
@@ -602,27 +489,18 @@ client.on('messageCreate', async (message) => {
       return;
     }
 
-    // ── .느린문의 [초] ──
+    // .느린문의 [초]
     if (content.startsWith('.느린문의')) {
-      const parts = content.split(' ');
-      const seconds = parseInt(parts[1]) || 0;
+      const seconds = parseInt(content.split(' ')[1]) || 0;
       try {
         await channel.setRateLimitPerUser(seconds);
-        const embed = new EmbedBuilder()
-          .setColor(0xf59e0b)
-          .setTitle('🐢 슬로우모드 설정')
-          .setDescription(seconds === 0 ? '슬로우모드가 **해제**되었습니다.' : `슬로우모드가 **${seconds}초**로 설정되었습니다.`)
-          .setFooter({ text: 'StoryHUB' })
-          .setTimestamp();
-        await channel.send({ embeds: [embed] });
-      } catch (e) {
-        await message.reply({ content: '⚠️ 슬로우모드 설정 실패: ' + e.message });
-      }
+        await channel.send({ embeds: [new EmbedBuilder().setColor(0xf59e0b).setTitle('🐢 슬로우모드 설정').setDescription(seconds === 0 ? '슬로우모드가 **해제**되었습니다.' : `슬로우모드가 **${seconds}초**로 설정되었습니다.`).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
+      } catch (e) { await message.reply({ content: '⚠️ 슬로우모드 설정 실패: ' + e.message }); }
       await message.react('🐢').catch(() => {});
       return;
     }
 
-    // ── .계좌안내 (전체) ──
+    // .계좌안내 (전체)
     if (content === '.계좌안내') {
       const accounts = [
         '> 💙 **토스뱅크** 1000-0583-1654 ( 수콩 )',
@@ -633,129 +511,53 @@ client.on('messageCreate', async (message) => {
       if (userId) {
         try {
           const user = await client.users.fetch(userId);
-          const embed = new EmbedBuilder()
-            .setColor(0x7c3aed)
-            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
-            .setTitle('💳 계좌 안내')
-            .setDescription(accounts)
-            .setFooter({ text: 'StoryHUB' })
-            .setTimestamp();
-          await user.send({ embeds: [embed] });
+          await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() }).setTitle('💳 계좌 안내').setDescription(accounts).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
         } catch {}
       }
       await message.react('💳').catch(() => {});
       return;
     }
 
-    // ── .수콩계좌 ──
-    if (content === '.수콩계좌') {
+    // 개별 계좌
+    const accountMap = {
+      '.수콩계좌':   '> 💙 **토스뱅크** 1000-0583-1654 ( 수콩 )',
+      '.바른각계좌': '> 🏦 **기업은행** 98005533201015 ( 바른각 )',
+      '.현성계좌':   '> 💚 **케이뱅크** 100115502126 ( 현성 )',
+      '.인찬계좌':   '> 🔴 **신한은행** 110440034614 ( 인찬 )',
+    };
+    if (accountMap[content]) {
       if (userId) {
         try {
           const user = await client.users.fetch(userId);
-          const embed = new EmbedBuilder()
-            .setColor(0x7c3aed)
-            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
-            .setTitle('💳 계좌 안내')
-            .setDescription('> 💙 **토스뱅크** 1000-0583-1654 ( 수콩 )')
-            .setFooter({ text: 'StoryHUB' })
-            .setTimestamp();
-          await user.send({ embeds: [embed] });
+          await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() }).setTitle('💳 계좌 안내').setDescription(accountMap[content]).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
         } catch {}
       }
       await message.react('💳').catch(() => {});
       return;
     }
 
-    // ── .바른각계좌 ──
-    if (content === '.바른각계좌') {
-      if (userId) {
-        try {
-          const user = await client.users.fetch(userId);
-          const embed = new EmbedBuilder()
-            .setColor(0x7c3aed)
-            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
-            .setTitle('💳 계좌 안내')
-            .setDescription('> 🏦 **기업은행** 98005533201015 ( 바른각 )')
-            .setFooter({ text: 'StoryHUB' })
-            .setTimestamp();
-          await user.send({ embeds: [embed] });
-        } catch {}
-      }
-      await message.react('💳').catch(() => {});
-      return;
-    }
-
-    // ── .현성계좌 ──
-    if (content === '.현성계좌') {
-      if (userId) {
-        try {
-          const user = await client.users.fetch(userId);
-          const embed = new EmbedBuilder()
-            .setColor(0x7c3aed)
-            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
-            .setTitle('💳 계좌 안내')
-            .setDescription('> 💚 **케이뱅크** 100115502126 ( 현성 )')
-            .setFooter({ text: 'StoryHUB' })
-            .setTimestamp();
-          await user.send({ embeds: [embed] });
-        } catch {}
-      }
-      await message.react('💳').catch(() => {});
-      return;
-    }
-
-    // ── .인찬계좌 ──
-    if (content === '.인찬계좌') {
-      if (userId) {
-        try {
-          const user = await client.users.fetch(userId);
-          const embed = new EmbedBuilder()
-            .setColor(0x7c3aed)
-            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
-            .setTitle('💳 계좌 안내')
-            .setDescription('> 🔴 **신한은행** 110440034614 ( 인찬 )')
-            .setFooter({ text: 'StoryHUB' })
-            .setTimestamp();
-          await user.send({ embeds: [embed] });
-        } catch {}
-      }
-      await message.react('💳').catch(() => {});
-      return;
-    }
-
-    // ── .결제동의서 ──
+    // .결제동의서
     if (content === '.결제동의서') {
       const link = await getSetting('결제동의서') || '결제동의서 링크가 설정되지 않았습니다. `/설정 결제동의서`로 설정해주세요.';
       if (userId) {
         try {
           const user = await client.users.fetch(userId);
-          const embed = new EmbedBuilder()
-            .setColor(0x7c3aed)
-            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
-            .setTitle('📄 결제동의서')
-            .setDescription(`아래 링크를 통해 결제동의서를 확인해주세요.\n\n${link}`)
-            .setFooter({ text: 'StoryHUB' })
-            .setTimestamp();
-          await user.send({ embeds: [embed] });
+          await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() }).setTitle('📄 결제동의서').setDescription(`아래 링크를 통해 결제동의서를 확인해주세요.\n\n${link}`).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
         } catch {}
       }
       await message.react('📄').catch(() => {});
       return;
     }
 
-    // ── 일반 스탭 답변 → 유저 DM 릴레이 ──
+    // 일반 스탭 답변
     if (!userId) return;
     try {
       const user = await client.users.fetch(userId);
-      const replyEmbed = new EmbedBuilder()
-        .setColor(0xa78bfa)
-        .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
-        .setDescription(message.content || '(첨부파일)')
-        .setFooter({ text: 'StoryHUB • 이 메시지에 답장하면 스탭에게 전달됩니다' })
-        .setTimestamp();
-
       const fileAttachments = message.attachments.map(a => new AttachmentBuilder(a.url, { name: a.name }));
-      await user.send({ embeds: [replyEmbed], files: fileAttachments.length > 0 ? fileAttachments : [] });
+      await user.send({
+        embeds: [new EmbedBuilder().setColor(0xa78bfa).setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() }).setDescription(message.content || '(첨부파일)').setFooter({ text: 'StoryHUB • 이 메시지에 답장하면 스탭에게 전달됩니다' }).setTimestamp()],
+        files: fileAttachments.length > 0 ? fileAttachments : [],
+      });
       await message.react('📨').catch(() => {});
 
       if (ticketId) {
@@ -764,16 +566,7 @@ client.on('messageCreate', async (message) => {
           const ticketDoc = await db.collection('tickets').doc(ticketId).get();
           if (ticketDoc.exists) {
             const msgs = ticketDoc.data().messages || [];
-            msgs.push({
-              authorId: message.author.id,
-              authorTag: message.author.tag,
-              authorAvatar: message.author.displayAvatarURL({ size: 64 }),
-              content: message.content || '',
-              attachments: message.attachments.map(a => a.url),
-              isBot: false,
-              from: 'staff',
-              timestamp: new Date().toISOString(),
-            });
+            msgs.push({ authorId: message.author.id, authorTag: message.author.tag, authorAvatar: message.author.displayAvatarURL({ size: 64 }), content: message.content || '', attachments: message.attachments.map(a => a.url), isBot: false, from: 'staff', timestamp: new Date().toISOString() });
             await db.collection('tickets').doc(ticketId).update({ messages: msgs });
           }
         } catch {}
@@ -788,27 +581,14 @@ client.on('messageCreate', async (message) => {
 // 티켓 종료
 // ─────────────────────────────────────────────
 async function closeTicket(channel, ticketId, member, interaction = null, message = null) {
-  const closingEmbed = new EmbedBuilder()
-    .setColor(0xef4444)
-    .setTitle('🔒 티켓 종료 중')
-    .setDescription(`**${member.user.tag}** 님이 티켓을 종료합니다.\n잠시 후 채널이 삭제됩니다.`)
-    .setTimestamp();
-
+  const closingEmbed = new EmbedBuilder().setColor(0xef4444).setTitle('🔒 티켓 종료 중').setDescription(`**${member.user.tag}** 님이 티켓을 종료합니다.\n잠시 후 채널이 삭제됩니다.`).setTimestamp();
   if (interaction) await interaction.reply({ embeds: [closingEmbed] });
   else if (message) await channel.send({ embeds: [closingEmbed] });
 
   const logUrl = `${config.WEB_BASE_URL}ticket/${ticketId}`;
   try {
-    await getDb().collection('tickets').doc(ticketId).update({
-      status: 'closed',
-      closedAt: new Date().toISOString(),
-      closedBy: member.user.tag,
-      closedById: member.id,
-      logUrl,
-    });
-  } catch (e) {
-    console.error('티켓 종료 저장 실패:', e);
-  }
+    await getDb().collection('tickets').doc(ticketId).update({ status: 'closed', closedAt: new Date().toISOString(), closedBy: member.user.tag, closedById: member.id, logUrl });
+  } catch (e) { console.error('티켓 종료 저장 실패:', e); }
 
   const userId = channel.topic?.match(/userId:(\d+)/)?.[1];
   if (userId) dmMap.delete(userId);
@@ -816,30 +596,14 @@ async function closeTicket(channel, ticketId, member, interaction = null, messag
   if (userId) {
     try {
       const user = await client.users.fetch(userId);
-      const dmEmbed = new EmbedBuilder()
-        .setColor(0x7c3aed)
-        .setTitle('✅ 문의 종료')
-        .setDescription('문의가 종료되었습니다.\n이용해주셔서 감사합니다 🩷')
-        .setFooter({ text: 'StoryHUB' })
-        .setTimestamp();
-      await user.send({ embeds: [dmEmbed] });
+      await user.send({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setTitle('✅ 문의 종료').setDescription('문의가 종료되었습니다.\n이용해주셔서 감사합니다 🩷').setFooter({ text: 'StoryHUB' }).setTimestamp()] });
     } catch {}
   }
 
   const guild = channel.guild;
   const logChannel = guild.channels.cache.get(config.LOG_CHANNEL_ID);
   if (logChannel) {
-    const logEmbed = new EmbedBuilder()
-      .setColor(0xef4444)
-      .setTitle('🔒 티켓 종료 — 로그 저장됨')
-      .addFields(
-        { name: '📋 채널', value: channel.name, inline: true },
-        { name: '👤 닫은 사람', value: member.user.tag, inline: true },
-        { name: '🔗 로그 링크', value: logUrl, inline: false },
-      )
-      .setFooter({ text: 'StoryHUB' })
-      .setTimestamp();
-    logChannel.send({ embeds: [logEmbed] });
+    logChannel.send({ embeds: [new EmbedBuilder().setColor(0xef4444).setTitle('🔒 티켓 종료 — 로그 저장됨').addFields({ name: '📋 채널', value: channel.name, inline: true }, { name: '👤 닫은 사람', value: member.user.tag, inline: true }, { name: '🔗 로그 링크', value: logUrl, inline: false }).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
   }
 
   logAction(guild, `🔒 티켓 닫힘`, null, 0xef4444, [
@@ -851,17 +615,10 @@ async function closeTicket(channel, ticketId, member, interaction = null, messag
   setTimeout(() => channel.delete().catch(() => {}), 5000);
 }
 
-// ─────────────────────────────────────────────
-// 로그 헬퍼
-// ─────────────────────────────────────────────
 async function logAction(guild, title, description, color, fields = []) {
   const logChannel = guild.channels.cache.get(config.LOG_CHANNEL_ID);
   if (!logChannel) return;
-  const embed = new EmbedBuilder()
-    .setColor(color)
-    .setTitle(title)
-    .setFooter({ text: 'StoryHUB' })
-    .setTimestamp();
+  const embed = new EmbedBuilder().setColor(color).setTitle(title).setFooter({ text: 'StoryHUB' }).setTimestamp();
   if (description) embed.setDescription(description);
   if (fields.length > 0) embed.addFields(fields);
   logChannel.send({ embeds: [embed] }).catch(() => {});
