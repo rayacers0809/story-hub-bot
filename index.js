@@ -632,8 +632,7 @@ client.on('messageCreate', async (message) => {
         '> 🏦 **기업은행** 98005533201015 ( 바른각 )',
         '> 💚 **케이뱅크** 100115502126 ( 현성 )',
         '> 🔴 **신한은행** 110440034614 ( 인찬 )',
-      ].join('
-');
+      ].join('\n');
       if (userId) {
         try {
           const user = await client.users.fetch(userId);
