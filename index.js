@@ -255,6 +255,16 @@ client.on('interactionCreate', async (interaction) => {
           ],
         },
         {
+          id: config.STAFF_ROLE_ID3,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory,
+            PermissionsBitField.Flags.AttachFiles,
+            PermissionsBitField.Flags.ManageMessages,
+          ],
+        },
+        {
           id: client.user.id,
           allow: [
             PermissionsBitField.Flags.ViewChannel,
@@ -328,7 +338,7 @@ client.on('interactionCreate', async (interaction) => {
   // ── 클레임 ──
   if (interaction.isButton() && interaction.customId.startsWith('ticket_claim:')) {
     const member = interaction.member;
-    const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2);
+    const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2) || member.roles.cache.has(config.STAFF_ROLE_ID3);
     if (!isStaff) return interaction.reply({ content: '❌ 스탭만 클레임할 수 있습니다.', flags: 64 });
     const ticketId = interaction.customId.split(':')[1];
     const claimEmbed = new EmbedBuilder()
@@ -354,7 +364,7 @@ client.on('interactionCreate', async (interaction) => {
   // ── 티켓 종료 버튼 ──
   if (interaction.isButton() && interaction.customId.startsWith('ticket_close:')) {
     const member = interaction.member;
-    const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2);
+    const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2) || member.roles.cache.has(config.STAFF_ROLE_ID3);
     if (!isStaff) {
       return interaction.reply({
         embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 스탭만 티켓을 종료할 수 있습니다.')],
@@ -420,8 +430,9 @@ async function sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId
       {
         name: '⌨️ 문의 명령어 안내',
         value: [
-          '> `.느린문의` — 상대에게 문의가 좀 늦어질 수 있다고 알려줍니다.',
-          '> `.계좌안내` — 계좌 정보를 전송합니다.',
+          '> `.느린문의 [초]` — 채널 슬로우모드를 설정합니다. (예: `.느린문의 30`)',
+          '> `.계좌안내` — 전체 계좌 정보를 전송합니다.',
+          '> `.수콩계좌` / `.바른각계좌` / `.현성계좌` / `.인찬계좌` — 개별 계좌 전송',
           '> `.결제동의서` — 결제동의서 링크를 전송합니다.',
         ].join('\n'),
         inline: false,
@@ -482,6 +493,13 @@ client.on('messageCreate', async (message) => {
       });
     }
 
+    // DM에서 . 명령어 차단
+    if (message.content.trim().startsWith('.')) {
+      return message.reply({
+        embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 해당 명령어는 스탭만 사용 가능합니다.')]
+      });
+    }
+
     const guild = client.guilds.cache.get(config.GUILD_ID);
     if (!guild) return;
     const ticketChannel = guild.channels.cache.get(ticketInfo.channelId);
@@ -530,7 +548,8 @@ client.on('messageCreate', async (message) => {
 
     const isStaff = (
       message.member?.roles.cache.has(config.STAFF_ROLE_ID) ||
-      message.member?.roles.cache.has(config.STAFF_ROLE_ID2)
+      message.member?.roles.cache.has(config.STAFF_ROLE_ID2) ||
+      message.member?.roles.cache.has(config.STAFF_ROLE_ID3)
     );
     if (!isStaff) return;
 
@@ -606,9 +625,15 @@ client.on('messageCreate', async (message) => {
       return;
     }
 
-    // ── .계좌안내 ──
+    // ── .계좌안내 (전체) ──
     if (content === '.계좌안내') {
-      const text = await getSetting('계좌안내') || '계좌 정보가 설정되지 않았습니다. `/설정 계좌안내`로 설정해주세요.';
+      const accounts = [
+        '> 💙 **토스뱅크** 1000-0583-1654 ( 수콩 )',
+        '> 🏦 **기업은행** 98005533201015 ( 바른각 )',
+        '> 💚 **케이뱅크** 100115502126 ( 현성 )',
+        '> 🔴 **신한은행** 110440034614 ( 인찬 )',
+      ].join('
+');
       if (userId) {
         try {
           const user = await client.users.fetch(userId);
@@ -616,7 +641,83 @@ client.on('messageCreate', async (message) => {
             .setColor(0x7c3aed)
             .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
             .setTitle('💳 계좌 안내')
-            .setDescription(text)
+            .setDescription(accounts)
+            .setFooter({ text: 'StoryHUB' })
+            .setTimestamp();
+          await user.send({ embeds: [embed] });
+        } catch {}
+      }
+      await message.react('💳').catch(() => {});
+      return;
+    }
+
+    // ── .수콩계좌 ──
+    if (content === '.수콩계좌') {
+      if (userId) {
+        try {
+          const user = await client.users.fetch(userId);
+          const embed = new EmbedBuilder()
+            .setColor(0x7c3aed)
+            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
+            .setTitle('💳 계좌 안내')
+            .setDescription('> 💙 **토스뱅크** 1000-0583-1654 ( 수콩 )')
+            .setFooter({ text: 'StoryHUB' })
+            .setTimestamp();
+          await user.send({ embeds: [embed] });
+        } catch {}
+      }
+      await message.react('💳').catch(() => {});
+      return;
+    }
+
+    // ── .바른각계좌 ──
+    if (content === '.바른각계좌') {
+      if (userId) {
+        try {
+          const user = await client.users.fetch(userId);
+          const embed = new EmbedBuilder()
+            .setColor(0x7c3aed)
+            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
+            .setTitle('💳 계좌 안내')
+            .setDescription('> 🏦 **기업은행** 98005533201015 ( 바른각 )')
+            .setFooter({ text: 'StoryHUB' })
+            .setTimestamp();
+          await user.send({ embeds: [embed] });
+        } catch {}
+      }
+      await message.react('💳').catch(() => {});
+      return;
+    }
+
+    // ── .현성계좌 ──
+    if (content === '.현성계좌') {
+      if (userId) {
+        try {
+          const user = await client.users.fetch(userId);
+          const embed = new EmbedBuilder()
+            .setColor(0x7c3aed)
+            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
+            .setTitle('💳 계좌 안내')
+            .setDescription('> 💚 **케이뱅크** 100115502126 ( 현성 )')
+            .setFooter({ text: 'StoryHUB' })
+            .setTimestamp();
+          await user.send({ embeds: [embed] });
+        } catch {}
+      }
+      await message.react('💳').catch(() => {});
+      return;
+    }
+
+    // ── .인찬계좌 ──
+    if (content === '.인찬계좌') {
+      if (userId) {
+        try {
+          const user = await client.users.fetch(userId);
+          const embed = new EmbedBuilder()
+            .setColor(0x7c3aed)
+            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
+            .setTitle('💳 계좌 안내')
+            .setDescription('> 🔴 **신한은행** 110440034614 ( 인찬 )')
             .setFooter({ text: 'StoryHUB' })
             .setTimestamp();
           await user.send({ embeds: [embed] });
