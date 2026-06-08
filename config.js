@@ -9,6 +9,7 @@ module.exports = {
   LOG_CHANNEL_ID:          process.env.LOG_CHANNEL_ID,
   STAFF_ROLE_ID:           process.env.STAFF_ROLE_ID,
   STAFF_ROLE_ID2:          process.env.STAFF_ROLE_ID2,
+  STAFF_ROLE_ID3:          process.env.STAFF_ROLE_ID3,
 
   CATEGORIES: {
     BUY:    process.env.CATEGORY_BUY,
