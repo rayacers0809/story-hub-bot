@@ -32,6 +32,7 @@ initFirebase();
 
 let ticketCounter = 0;
 const dmMap = new Map();
+const closingSet = new Set(); // 중복 종료 방지
 
 async function getSetting(key) {
   try {
@@ -110,7 +111,7 @@ client.on('interactionCreate', async (interaction) => {
       .setColor(0x7c3aed)
       .setTitle('📦 Story HUB 고객센터')
       .setDescription(
-        '## 고객센터 안내사항\n\n' +
+        '## 고객센터 안내사항\n' +
         '> - 본 고객센터는 서버의 여러 문의를 접수하기 위한 공간입니다. 해당 채널을 악용하여 용도 이외의 방법으로 사용하는 경구 관련 규정에 따라 제재 처리될 수 있습니다.\n' +
         '> ## 운영시간 안내\n' +
         '> ## - 평일 **13:00 ~ 23:50**\n' +
@@ -556,6 +557,9 @@ client.on('messageCreate', async (message) => {
 // 티켓 종료
 // ─────────────────────────────────────────────
 async function closeTicket(channel, ticketId, member, interaction = null, message = null) {
+  if (closingSet.has(ticketId)) return; // 중복 종료 방지
+  closingSet.add(ticketId);
+
   const closingEmbed = new EmbedBuilder().setColor(0xef4444).setTitle('🔒 티켓 종료 중').setDescription(`**${member.user.tag}** 님이 티켓을 종료합니다.\n잠시 후 채널이 삭제됩니다.`).setTimestamp();
   if (interaction) await interaction.reply({ embeds: [closingEmbed] });
   else if (message) await channel.send({ embeds: [closingEmbed] });
