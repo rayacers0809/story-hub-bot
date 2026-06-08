@@ -538,32 +538,69 @@ client.on('messageCreate', async (message) => {
     const ticketId = channel.topic.match(/ticketId:([a-f0-9-]+)/)?.[1];
     const userId = channel.topic.match(/userId:(\d+)/)?.[1];
 
-    // ── $ 로 시작하면 스탭 내부 메시지 (유저에게 안 보냄) ──
-    if (content.startsWith('$')) {
-      await message.react('🔕').catch(() => {});
-      return;
-    }
-
-    // ── .문의종료 / .강제종료 / !종료 ──
-    if (content === '.문의종료' || content === '.강제종료' || content === '!종료') {
+    // ── .문의종료 / !종료 ──
+    if (content === '.문의종료' || content === '!종료') {
       if (ticketId) await closeTicket(channel, ticketId, message.member, null, message);
       return;
     }
 
-    // ── .느린문의 ──
-    if (content === '.느린문의') {
-      const text = await getSetting('느린문의') || '현재 문의가 많아 응답이 늦어질 수 있습니다. 잠시만 기다려 주세요 🙏';
-      if (userId) {
+    // ── ! 로 시작하면 스탭 내부 메시지 (유저에게 안 보냄) ──
+    if (content.startsWith('!')) {
+      await message.react('🔕').catch(() => {});
+      return;
+    }
+
+    // ── .강제종료 (유저가 서버 나간 경우 등 강제 삭제) ──
+    if (content === '.강제종료') {
+      const forceEmbed = new EmbedBuilder()
+        .setColor(0xef4444)
+        .setTitle('⚠️ 강제 종료')
+        .setDescription(`**${message.member.user.tag}** 님이 티켓을 강제 종료합니다.
+잠시 후 채널이 삭제됩니다.`)
+        .setTimestamp();
+      await channel.send({ embeds: [forceEmbed] });
+
+      // Firestore 업데이트
+      if (ticketId) {
+        const logUrl = `${config.WEB_BASE_URL}ticket/${ticketId}`;
         try {
-          const user = await client.users.fetch(userId);
-          const embed = new EmbedBuilder()
-            .setColor(0xf59e0b)
-            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
-            .setDescription(text)
-            .setFooter({ text: 'StoryHUB' })
-            .setTimestamp();
-          await user.send({ embeds: [embed] });
+          await getDb().collection('tickets').doc(ticketId).update({
+            status: 'closed',
+            closedAt: new Date().toISOString(),
+            closedBy: message.member.user.tag,
+            closedById: message.member.id,
+            closeType: 'force',
+            logUrl,
+          });
         } catch {}
+        // dmMap에서 제거 (userId 기반)
+        if (userId) dmMap.delete(userId);
+        // 로그
+        logAction(channel.guild, '⚠️ 티켓 강제종료', null, 0xef4444, [
+          { name: '채널', value: channel.name, inline: true },
+          { name: '닫은 사람', value: message.member.user.tag, inline: true },
+          { name: '로그', value: logUrl, inline: false },
+        ]);
+      }
+      setTimeout(() => channel.delete().catch(() => {}), 3000);
+      return;
+    }
+
+    // ── .느린문의 [초] ──
+    if (content.startsWith('.느린문의')) {
+      const parts = content.split(' ');
+      const seconds = parseInt(parts[1]) || 0;
+      try {
+        await channel.setRateLimitPerUser(seconds);
+        const embed = new EmbedBuilder()
+          .setColor(0xf59e0b)
+          .setTitle('🐢 슬로우모드 설정')
+          .setDescription(seconds === 0 ? '슬로우모드가 **해제**되었습니다.' : `슬로우모드가 **${seconds}초**로 설정되었습니다.`)
+          .setFooter({ text: 'StoryHUB' })
+          .setTimestamp();
+        await channel.send({ embeds: [embed] });
+      } catch (e) {
+        await message.reply({ content: '⚠️ 슬로우모드 설정 실패: ' + e.message });
       }
       await message.react('🐢').catch(() => {});
       return;
