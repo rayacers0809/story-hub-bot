@@ -134,17 +134,14 @@ client.on('interactionCreate', async (interaction) => {
       .setFooter({ text: 'Story HUB • 문의는 언제든지 환영합니다' })
       .setTimestamp();
 
-    const selectMenu = new StringSelectMenuBuilder()
-      .setCustomId('ticket_select')
-      .setPlaceholder('선택하기')
-      .addOptions(config.TICKET_OPTIONS.map(opt => ({
-        label: opt.label,
-        description: opt.description,
-        value: opt.value,
-        emoji: opt.emoji,
-      })));
-
-    const row = new ActionRowBuilder().addComponents(selectMenu);
+    const buttons = config.TICKET_OPTIONS.map(opt =>
+      new ButtonBuilder()
+        .setCustomId(`ticket_btn:${opt.value}`)
+        .setLabel(opt.label)
+        .setEmoji(opt.emoji)
+        .setStyle(ButtonStyle.Primary)
+    );
+    const row = new ActionRowBuilder().addComponents(buttons);
     const targetChannel = interaction.guild.channels.cache.get(config.TICKET_PANEL_CHANNEL_ID);
     if (!targetChannel) return interaction.reply({ content: '❌ TICKET_PANEL_CHANNEL_ID를 확인해주세요.', ephemeral: true });
 
@@ -197,10 +194,10 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   // ── Select Menu: 티켓 생성 ──
-  if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_select') {
+  if (interaction.isButton() && interaction.customId.startsWith('ticket_btn:')) {
     await interaction.deferReply({ flags: 64 });
 
-    const selectedValue = interaction.values[0];
+    const selectedValue = interaction.customId.split(':')[1];
     const option = config.TICKET_OPTIONS.find(o => o.value === selectedValue);
     if (!option) return interaction.editReply({ content: '❌ 알 수 없는 옵션입니다.' });
 
