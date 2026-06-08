@@ -8,6 +8,10 @@ const {
   ButtonStyle,
   PermissionsBitField,
   ChannelType,
+  AttachmentBuilder,
+  SlashCommandBuilder,
+  REST,
+  Routes,
 } = require('discord.js');
 
 const { v4: uuidv4 } = require('uuid');
@@ -27,16 +31,71 @@ const client = new Client({
 initFirebase();
 
 let ticketCounter = 0;
-
-// userId → ticketId 맵핑 (DM 릴레이용)
-// { userId: { ticketId, channelId } }
 const dmMap = new Map();
+
+// ─────────────────────────────────────────────
+// Firestore에서 설정값 가져오기
+// ─────────────────────────────────────────────
+async function getSetting(key) {
+  try {
+    const doc = await getDb().collection('settings').doc(key).get();
+    if (doc.exists) return doc.data().value;
+  } catch {}
+  return null;
+}
+
+async function setSetting(key, value) {
+  await getDb().collection('settings').doc(key).set({ value });
+}
+
+// ─────────────────────────────────────────────
+// 슬래시 커맨드 등록
+// ─────────────────────────────────────────────
+async function registerCommands() {
+  const commands = [
+    new SlashCommandBuilder()
+      .setName('panel')
+      .setDescription('티켓 패널 전송 (관리자 전용)'),
+
+    new SlashCommandBuilder()
+      .setName('설정')
+      .setDescription('봇 설정 변경 (관리자 전용)')
+      .addStringOption(o =>
+        o.setName('항목')
+          .setDescription('변경할 항목')
+          .setRequired(true)
+          .addChoices(
+            { name: '계좌안내', value: '계좌안내' },
+            { name: '결제동의서', value: '결제동의서' },
+            { name: '느린문의', value: '느린문의' },
+          )
+      )
+      .addStringOption(o =>
+        o.setName('내용')
+          .setDescription('변경할 내용 (링크 또는 텍스트)')
+          .setRequired(true)
+      ),
+
+    new SlashCommandBuilder()
+      .setName('설정확인')
+      .setDescription('현재 설정값 확인 (관리자 전용)'),
+  ].map(c => c.toJSON());
+
+  const rest = new REST({ version: '10' }).setToken(config.TOKEN);
+  try {
+    await rest.put(Routes.applicationGuildCommands(config.CLIENT_ID, config.GUILD_ID), { body: commands });
+    console.log('✅ 슬래시 커맨드 등록 완료');
+  } catch (e) {
+    console.error('커맨드 등록 실패:', e.message);
+  }
+}
 
 // ─────────────────────────────────────────────
 // 봇 준비
 // ─────────────────────────────────────────────
 client.once('clientReady', async () => {
   console.log(`✅ ${client.user.tag} 온라인`);
+  await registerCommands();
   try {
     const db = getDb();
     const metaDoc = await db.collection('meta').doc('counter').get();
@@ -54,7 +113,7 @@ client.once('clientReady', async () => {
 // ─────────────────────────────────────────────
 client.on('interactionCreate', async (interaction) => {
 
-  // ── /panel 슬래시 커맨드 ──
+  // ── /panel ──
   if (interaction.isChatInputCommand() && interaction.commandName === 'panel') {
     if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
       return interaction.reply({ content: '❌ 관리자만 사용 가능합니다.', ephemeral: true });
@@ -73,32 +132,71 @@ client.on('interactionCreate', async (interaction) => {
     const selectMenu = new StringSelectMenuBuilder()
       .setCustomId('ticket_select')
       .setPlaceholder('선택하기')
-      .addOptions(
-        config.TICKET_OPTIONS.map((opt) => ({
-          label: opt.label,
-          description: opt.description,
-          value: opt.value,
-          emoji: opt.emoji,
-        }))
-      );
+      .addOptions(config.TICKET_OPTIONS.map(opt => ({
+        label: opt.label,
+        description: opt.description,
+        value: opt.value,
+        emoji: opt.emoji,
+      })));
 
     const row = new ActionRowBuilder().addComponents(selectMenu);
     const targetChannel = interaction.guild.channels.cache.get(config.TICKET_PANEL_CHANNEL_ID);
-
-    if (!targetChannel) {
-      return interaction.reply({ content: '❌ TICKET_PANEL_CHANNEL_ID를 확인해주세요.', ephemeral: true });
-    }
+    if (!targetChannel) return interaction.reply({ content: '❌ TICKET_PANEL_CHANNEL_ID를 확인해주세요.', ephemeral: true });
 
     await targetChannel.send({ embeds: [embed], components: [row] });
     return interaction.reply({ content: `✅ ${targetChannel} 에 패널 전송 완료!`, ephemeral: true });
   }
 
-  // ── Select Menu: 티켓 유형 선택 ──
+  // ── /설정 ──
+  if (interaction.isChatInputCommand() && interaction.commandName === '설정') {
+    if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
+      return interaction.reply({ content: '❌ 관리자만 사용 가능합니다.', ephemeral: true });
+    }
+    const 항목 = interaction.options.getString('항목');
+    const 내용 = interaction.options.getString('내용');
+    await setSetting(항목, 내용);
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor(0x22c55e)
+        .setTitle('✅ 설정 완료')
+        .addFields({ name: '항목', value: 항목, inline: true }, { name: '내용', value: 내용, inline: true })
+        .setTimestamp()
+      ],
+      ephemeral: true
+    });
+  }
+
+  // ── /설정확인 ──
+  if (interaction.isChatInputCommand() && interaction.commandName === '설정확인') {
+    if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
+      return interaction.reply({ content: '❌ 관리자만 사용 가능합니다.', ephemeral: true });
+    }
+    const [계좌, 동의서, 느린] = await Promise.all([
+      getSetting('계좌안내'),
+      getSetting('결제동의서'),
+      getSetting('느린문의'),
+    ]);
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor(0x7c3aed)
+        .setTitle('📋 현재 설정값')
+        .addFields(
+          { name: '💳 계좌안내', value: 계좌 || '*(미설정)*', inline: false },
+          { name: '📄 결제동의서', value: 동의서 || '*(미설정)*', inline: false },
+          { name: '🐢 느린문의', value: 느린 || '*(미설정)*', inline: false },
+        )
+        .setTimestamp()
+      ],
+      ephemeral: true
+    });
+  }
+
+  // ── Select Menu: 티켓 생성 ──
   if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_select') {
     await interaction.deferReply({ flags: 64 });
 
     const selectedValue = interaction.values[0];
-    const option = config.TICKET_OPTIONS.find((o) => o.value === selectedValue);
+    const option = config.TICKET_OPTIONS.find(o => o.value === selectedValue);
     if (!option) return interaction.editReply({ content: '❌ 알 수 없는 옵션입니다.' });
 
     const guild = interaction.guild;
@@ -106,11 +204,8 @@ client.on('interactionCreate', async (interaction) => {
     const categoryId = config.CATEGORIES[option.categoryKey];
     const category = guild.channels.cache.get(categoryId);
 
-    if (!category) {
-      return interaction.editReply({ content: `❌ \`${option.label}\` 카테고리를 찾을 수 없습니다.` });
-    }
+    if (!category) return interaction.editReply({ content: `❌ \`${option.label}\` 카테고리를 찾을 수 없습니다.` });
 
-    // 중복 티켓 체크
     if (dmMap.has(member.id)) {
       const existing = dmMap.get(member.id);
       const existingCh = guild.channels.cache.get(existing.channelId);
@@ -130,16 +225,13 @@ client.on('interactionCreate', async (interaction) => {
     const channelName = `${option.value.toLowerCase()}-${safeName}-${member.user.id.slice(-4)}`;
     const ticketNum = String(ticketCounter).padStart(4, '0');
 
-    // 티켓 채널 생성 (스탭만 보임)
     const ticketChannel = await guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
       parent: categoryId,
       topic: `ticketId:${ticketId} | userId:${member.id} | type:${option.value}`,
       permissionOverwrites: [
-        // @everyone 차단
         { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-        // 스탭 역할 허용
         {
           id: config.STAFF_ROLE_ID,
           allow: [
@@ -150,7 +242,6 @@ client.on('interactionCreate', async (interaction) => {
             PermissionsBitField.Flags.ManageMessages,
           ],
         },
-        // STAFF_ROLE_ID2도 허용
         {
           id: config.STAFF_ROLE_ID2,
           allow: [
@@ -161,7 +252,6 @@ client.on('interactionCreate', async (interaction) => {
             PermissionsBitField.Flags.ManageMessages,
           ],
         },
-        // 봇 자신 허용
         {
           id: client.user.id,
           allow: [
@@ -173,10 +263,8 @@ client.on('interactionCreate', async (interaction) => {
       ],
     });
 
-    // dmMap에 등록
     dmMap.set(member.id, { ticketId, channelId: ticketChannel.id, type: option.value, typeLabel: option.label });
 
-    // Firestore 저장
     const ticketData = {
       ticketId,
       ticketNumber: ticketCounter,
@@ -202,42 +290,10 @@ client.on('interactionCreate', async (interaction) => {
       console.error('티켓 생성 Firestore 저장 실패:', e);
     }
 
-    // ── 스탭 채널 임베드 ──
-    const staffEmbed = new EmbedBuilder()
-      .setColor(0x7c3aed)
-      .setAuthor({
-        name: `${member.displayName} (${member.user.tag})`,
-        iconURL: member.user.displayAvatarURL({ size: 64 }),
-      })
-      .setTitle(`${option.emoji} ${option.label} 티켓 #${ticketNum}`)
-      .setDescription(
-        `<@&${config.STAFF_ROLE_ID}> 새 문의가 접수되었습니다.\n\n` +
-        `> 이 채널에서 답변을 입력하면 유저의 DM으로 자동 전달됩니다.\n` +
-        `> 채널에서 \`!종료\` 입력 시 티켓이 종료됩니다.`
-      )
-      .addFields(
-        { name: '📋 문의 유형', value: option.label, inline: true },
-        { name: '👤 유저', value: `${member.user.tag}`, inline: true },
-        { name: '🆔 티켓 ID', value: `\`${ticketId}\``, inline: false },
-      )
-      .setFooter({ text: 'StoryHUB • 채널에 입력한 메시지가 유저 DM으로 전달됩니다' })
-      .setTimestamp();
+    // ── 스탭 채널 안내 임베드 (2번째 사진 형식) ──
+    await sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId);
 
-    const closeBtn = new ButtonBuilder()
-      .setCustomId(`ticket_close:${ticketId}`)
-      .setLabel('🔒 티켓 종료')
-      .setStyle(ButtonStyle.Danger);
-
-    const claimBtn = new ButtonBuilder()
-      .setCustomId(`ticket_claim:${ticketId}`)
-      .setLabel('✋ 클레임')
-      .setStyle(ButtonStyle.Secondary);
-
-    const btnRow = new ActionRowBuilder().addComponents(claimBtn, closeBtn);
-
-    await ticketChannel.send({ embeds: [staffEmbed], components: [btnRow] });
-
-    // ── 유저 DM 전송 ──
+    // ── 유저 DM ──
     try {
       const dmEmbed = new EmbedBuilder()
         .setColor(0x7c3aed)
@@ -250,16 +306,10 @@ client.on('interactionCreate', async (interaction) => {
         )
         .setFooter({ text: 'StoryHUB • 이 DM에 메시지를 보내면 스탭에게 전달됩니다' })
         .setTimestamp();
-
       await member.user.send({ embeds: [dmEmbed] });
     } catch {
-      // DM 차단한 경우
       await ticketChannel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xef4444)
-            .setDescription(`⚠️ **${member.user.tag}** 님의 DM이 차단되어 있어 메시지를 전송할 수 없습니다.`)
-        ]
+        embeds: [new EmbedBuilder().setColor(0xef4444).setDescription(`⚠️ **${member.user.tag}** 님의 DM이 차단되어 있어 메시지를 전송할 수 없습니다.`)]
       });
     }
 
@@ -273,13 +323,11 @@ client.on('interactionCreate', async (interaction) => {
     return interaction.editReply({ content: `✅ 문의가 접수되었습니다! DM을 확인해주세요 🩷` });
   }
 
-  // ── Button: 클레임 (스탭만) ──
+  // ── 클레임 ──
   if (interaction.isButton() && interaction.customId.startsWith('ticket_claim:')) {
     const member = interaction.member;
-    const isStaff = (member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2));
-    if (!isStaff) {
-      return interaction.reply({ content: '❌ 스탭만 클레임할 수 있습니다.', flags: 64 });
-    }
+    const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2);
+    if (!isStaff) return interaction.reply({ content: '❌ 스탭만 클레임할 수 있습니다.', flags: 64 });
     const ticketId = interaction.customId.split(':')[1];
     const claimEmbed = new EmbedBuilder()
       .setColor(0xf59e0b)
@@ -301,10 +349,10 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
 
-  // ── Button: 티켓 종료 (스탭만) ──
+  // ── 티켓 종료 버튼 ──
   if (interaction.isButton() && interaction.customId.startsWith('ticket_close:')) {
     const member = interaction.member;
-    const isStaff = (member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2));
+    const isStaff = member.roles.cache.has(config.STAFF_ROLE_ID) || member.roles.cache.has(config.STAFF_ROLE_ID2);
     if (!isStaff) {
       return interaction.reply({
         embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 스탭만 티켓을 종료할 수 있습니다.')],
@@ -317,7 +365,108 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 // ─────────────────────────────────────────────
-// 메시지 핸들러 (DM 릴레이 + 스탭 답변 릴레이)
+// 스탭 채널 안내 임베드 전송
+// ─────────────────────────────────────────────
+async function sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId) {
+  // 최근 문의 내역 (Firestore에서 해당 유저의 최근 5개)
+  let recentList = '없음';
+  try {
+    const db = getDb();
+    const snap = await db.collection('tickets')
+      .where('userId', '==', member.id)
+      .where('status', '==', 'closed')
+      .orderBy('closedAt', 'desc')
+      .limit(4)
+      .get();
+
+    if (!snap.empty) {
+      recentList = snap.docs.map(doc => {
+        const d = doc.data();
+        const date = new Date(d.closedAt);
+        const label = `${String(date.getFullYear()).slice(2)}년 ${String(date.getMonth()+1).padStart(2,'0')}월 ${String(date.getDate()).padStart(2,'0')}일 문의내역`;
+        return `[${label}](${config.WEB_BASE_URL}ticket/${d.ticketId})`;
+      }).join('\n');
+    }
+  } catch {}
+
+  // 안내 임베드
+  const guideEmbed = new EmbedBuilder()
+    .setColor(0x7c3aed)
+    .setAuthor({
+      name: `${member.displayName} (${member.user.tag})`,
+      iconURL: member.user.displayAvatarURL({ size: 64 }),
+    })
+    .setTitle('문의 관리 안내')
+    .addFields(
+      {
+        name: '📢 문의 응대 안내',
+        value: [
+          '> 텍스트 앞에 `$`을 붙이고 채팅을 친다면 문의자에게 발송이 되지 않습니다. (`예시: $ @GM 도와주세요`)',
+          '> 문의가 밀려 문의를 기다려야 할 경우 `.느린문의`를 입력해 주세요.',
+          '> 항상 친절하고, 정확하게 전달을 중요시 하여야 합니다. 모르는 것이 있다면 담당 개발자 또는 관리자에게 질문 후 답변 부탁드리겠습니다.',
+        ].join('\n'),
+        inline: false,
+      },
+      {
+        name: '🔒 문의 종료 안내',
+        value: [
+          '> `.문의종료`를 입력해 주세요.',
+          '> 위의 문의종료가 정상적으로 작동 되지 않는다면 `.강제종료`를 입력해 주세요.',
+        ].join('\n'),
+        inline: false,
+      },
+      {
+        name: '⌨️ 문의 명령어 안내',
+        value: [
+          '> `.느린문의` — 상대에게 문의가 좀 늦어질 수 있다고 알려줍니다.',
+          '> `.계좌안내` — 계좌 정보를 전송합니다.',
+          '> `.결제동의서` — 결제동의서 링크를 전송합니다.',
+        ].join('\n'),
+        inline: false,
+      },
+      {
+        name: '📋 최근 문의 내역',
+        value: recentList,
+        inline: false,
+      },
+    )
+    .setFooter({ text: `StoryHUB • 티켓 #${ticketNum}` })
+    .setTimestamp();
+
+  // 스탭 알림 임베드
+  const staffEmbed = new EmbedBuilder()
+    .setColor(0x7c3aed)
+    .setTitle(`${option.emoji} ${option.label} 티켓 #${ticketNum}`)
+    .setDescription(
+      `<@&${config.STAFF_ROLE_ID}> 새 문의가 접수되었습니다.\n\n` +
+      `> 이 채널에서 답변을 입력하면 유저의 DM으로 자동 전달됩니다.`
+    )
+    .addFields(
+      { name: '📋 문의 유형', value: option.label, inline: true },
+      { name: '👤 유저', value: `${member.user.tag}`, inline: true },
+      { name: '🆔 티켓 ID', value: `\`${ticketId}\``, inline: false },
+    )
+    .setFooter({ text: 'StoryHUB' })
+    .setTimestamp();
+
+  const closeBtn = new ButtonBuilder()
+    .setCustomId(`ticket_close:${ticketId}`)
+    .setLabel('🔒 티켓 종료')
+    .setStyle(ButtonStyle.Danger);
+
+  const claimBtn = new ButtonBuilder()
+    .setCustomId(`ticket_claim:${ticketId}`)
+    .setLabel('✋ 클레임')
+    .setStyle(ButtonStyle.Secondary);
+
+  const btnRow = new ActionRowBuilder().addComponents(claimBtn, closeBtn);
+
+  await ticketChannel.send({ embeds: [staffEmbed], components: [btnRow] });
+  await ticketChannel.send({ embeds: [guideEmbed] });
+}
+
+// ─────────────────────────────────────────────
+// 메시지 핸들러
 // ─────────────────────────────────────────────
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
@@ -327,11 +476,7 @@ client.on('messageCreate', async (message) => {
     const ticketInfo = dmMap.get(message.author.id);
     if (!ticketInfo) {
       return message.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xef4444)
-            .setDescription('❌ 진행중인 문의가 없습니다.\n서버에서 티켓을 먼저 생성해주세요.')
-        ]
+        embeds: [new EmbedBuilder().setColor(0xef4444).setDescription('❌ 진행중인 문의가 없습니다.\n서버에서 티켓을 먼저 생성해주세요.')]
       });
     }
 
@@ -340,7 +485,6 @@ client.on('messageCreate', async (message) => {
     const ticketChannel = guild.channels.cache.get(ticketInfo.channelId);
     if (!ticketChannel) return;
 
-    // 스탭 채널에 유저 메시지 릴레이
     const relayEmbed = new EmbedBuilder()
       .setColor(0x6366f1)
       .setAuthor({
@@ -352,11 +496,8 @@ client.on('messageCreate', async (message) => {
 
     const files = message.attachments.map(a => a.url);
     await ticketChannel.send({ embeds: [relayEmbed], files });
-
-    // 유저에게 확인 이모지
     await message.react('✅').catch(() => {});
 
-    // Firestore 메시지 기록
     try {
       const db = getDb();
       const ticketDoc = await db.collection('tickets').doc(ticketInfo.ticketId).get();
@@ -380,7 +521,7 @@ client.on('messageCreate', async (message) => {
     return;
   }
 
-  // ── 스탭 채널: 답변 → 유저 DM 릴레이 ──
+  // ── 스탭 채널 메시지 ──
   if (message.guild && message.guild.id === config.GUILD_ID) {
     const channel = message.channel;
     if (!channel.topic || !channel.topic.includes('ticketId:')) return;
@@ -391,17 +532,83 @@ client.on('messageCreate', async (message) => {
     );
     if (!isStaff) return;
 
-    // !종료 명령어
-    if (message.content.trim() === '!종료') {
-      const ticketId = channel.topic.match(/ticketId:([a-f0-9-]+)/)?.[1];
+    const content = message.content.trim();
+    const ticketId = channel.topic.match(/ticketId:([a-f0-9-]+)/)?.[1];
+    const userId = channel.topic.match(/userId:(\d+)/)?.[1];
+
+    // ── $ 로 시작하면 스탭 내부 메시지 (유저에게 안 보냄) ──
+    if (content.startsWith('$')) {
+      await message.react('🔕').catch(() => {});
+      return;
+    }
+
+    // ── .문의종료 / .강제종료 / !종료 ──
+    if (content === '.문의종료' || content === '.강제종료' || content === '!종료') {
       if (ticketId) await closeTicket(channel, ticketId, message.member, null, message);
       return;
     }
 
-    // 스탭 답변 → 유저 DM
-    const userId = channel.topic.match(/userId:(\d+)/)?.[1];
-    if (!userId) return;
+    // ── .느린문의 ──
+    if (content === '.느린문의') {
+      const text = await getSetting('느린문의') || '현재 문의가 많아 응답이 늦어질 수 있습니다. 잠시만 기다려 주세요 🙏';
+      if (userId) {
+        try {
+          const user = await client.users.fetch(userId);
+          const embed = new EmbedBuilder()
+            .setColor(0xf59e0b)
+            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
+            .setDescription(text)
+            .setFooter({ text: 'StoryHUB' })
+            .setTimestamp();
+          await user.send({ embeds: [embed] });
+        } catch {}
+      }
+      await message.react('🐢').catch(() => {});
+      return;
+    }
 
+    // ── .계좌안내 ──
+    if (content === '.계좌안내') {
+      const text = await getSetting('계좌안내') || '계좌 정보가 설정되지 않았습니다. `/설정 계좌안내`로 설정해주세요.';
+      if (userId) {
+        try {
+          const user = await client.users.fetch(userId);
+          const embed = new EmbedBuilder()
+            .setColor(0x7c3aed)
+            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
+            .setTitle('💳 계좌 안내')
+            .setDescription(text)
+            .setFooter({ text: 'StoryHUB' })
+            .setTimestamp();
+          await user.send({ embeds: [embed] });
+        } catch {}
+      }
+      await message.react('💳').catch(() => {});
+      return;
+    }
+
+    // ── .결제동의서 ──
+    if (content === '.결제동의서') {
+      const link = await getSetting('결제동의서') || '결제동의서 링크가 설정되지 않았습니다. `/설정 결제동의서`로 설정해주세요.';
+      if (userId) {
+        try {
+          const user = await client.users.fetch(userId);
+          const embed = new EmbedBuilder()
+            .setColor(0x7c3aed)
+            .setAuthor({ name: 'StoryHUB 스탭', iconURL: client.user.displayAvatarURL() })
+            .setTitle('📄 결제동의서')
+            .setDescription(`아래 링크를 통해 결제동의서를 확인해주세요.\n\n${link}`)
+            .setFooter({ text: 'StoryHUB' })
+            .setTimestamp();
+          await user.send({ embeds: [embed] });
+        } catch {}
+      }
+      await message.react('📄').catch(() => {});
+      return;
+    }
+
+    // ── 일반 스탭 답변 → 유저 DM 릴레이 ──
+    if (!userId) return;
     try {
       const user = await client.users.fetch(userId);
       const replyEmbed = new EmbedBuilder()
@@ -411,21 +618,10 @@ client.on('messageCreate', async (message) => {
         .setFooter({ text: 'StoryHUB • 이 메시지에 답장하면 스탭에게 전달됩니다' })
         .setTimestamp();
 
-      // 첨부파일을 Attachment 객체로 변환해서 재전송
-      const { AttachmentBuilder } = require('discord.js');
-      const fileAttachments = message.attachments.map(a =>
-        new AttachmentBuilder(a.url, { name: a.name })
-      );
-      await user.send({
-        embeds: [replyEmbed],
-        files: fileAttachments.length > 0 ? fileAttachments : [],
-      });
-
-      // 전송 확인 이모지
+      const fileAttachments = message.attachments.map(a => new AttachmentBuilder(a.url, { name: a.name }));
+      await user.send({ embeds: [replyEmbed], files: fileAttachments.length > 0 ? fileAttachments : [] });
       await message.react('📨').catch(() => {});
 
-      // Firestore 메시지 기록
-      const ticketId = channel.topic.match(/ticketId:([a-f0-9-]+)/)?.[1];
       if (ticketId) {
         try {
           const db = getDb();
@@ -437,7 +633,7 @@ client.on('messageCreate', async (message) => {
               authorTag: message.author.tag,
               authorAvatar: message.author.displayAvatarURL({ size: 64 }),
               content: message.content || '',
-              attachments: files,
+              attachments: message.attachments.map(a => a.url),
               isBot: false,
               from: 'staff',
               timestamp: new Date().toISOString(),
@@ -453,7 +649,7 @@ client.on('messageCreate', async (message) => {
 });
 
 // ─────────────────────────────────────────────
-// 티켓 종료 함수
+// 티켓 종료
 // ─────────────────────────────────────────────
 async function closeTicket(channel, ticketId, member, interaction = null, message = null) {
   const closingEmbed = new EmbedBuilder()
@@ -462,14 +658,10 @@ async function closeTicket(channel, ticketId, member, interaction = null, messag
     .setDescription(`**${member.user.tag}** 님이 티켓을 종료합니다.\n잠시 후 채널이 삭제됩니다.`)
     .setTimestamp();
 
-  if (interaction) {
-    await interaction.reply({ embeds: [closingEmbed] });
-  } else if (message) {
-    await channel.send({ embeds: [closingEmbed] });
-  }
+  if (interaction) await interaction.reply({ embeds: [closingEmbed] });
+  else if (message) await channel.send({ embeds: [closingEmbed] });
 
-  // Firestore 업데이트
-  const logUrl = `${config.WEB_BASE_URL}/ticket/${ticketId}`;
+  const logUrl = `${config.WEB_BASE_URL}ticket/${ticketId}`;
   try {
     await getDb().collection('tickets').doc(ticketId).update({
       status: 'closed',
@@ -482,11 +674,9 @@ async function closeTicket(channel, ticketId, member, interaction = null, messag
     console.error('티켓 종료 저장 실패:', e);
   }
 
-  // dmMap에서 제거
   const userId = channel.topic?.match(/userId:(\d+)/)?.[1];
   if (userId) dmMap.delete(userId);
 
-  // 유저에게 종료 DM (로그 링크 없음)
   if (userId) {
     try {
       const user = await client.users.fetch(userId);
@@ -500,7 +690,6 @@ async function closeTicket(channel, ticketId, member, interaction = null, messag
     } catch {}
   }
 
-  // 로그 채널에 링크 전송
   const guild = channel.guild;
   const logChannel = guild.channels.cache.get(config.LOG_CHANNEL_ID);
   if (logChannel) {
