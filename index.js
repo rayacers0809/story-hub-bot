@@ -121,12 +121,17 @@ client.on('interactionCreate', async (interaction) => {
 
     const embed = new EmbedBuilder()
       .setColor(0x7c3aed)
-      .setTitle('🌸 StoryHUB 구매티켓')
+      .setTitle('📦 Story HUB 고객센터')
       .setDescription(
-        '스토리샵은 운영중입니다 편하게 문의주세요 🩷\n' +
-        '🐾 구매는 아래 티켓을 눌러 필요한 문의를 선택해주세요.'
+        '## 고객센터 안내사항\n\n' +
+        '> 본 고객센터는 **스크립트, 디자인 등 다양한 디지털 상품**에 대한\n' +
+        '> 구매 문의 및 서비스 이용 관련 문의를 접수하기 위한 공간입니다.\n\n' +
+        '> 해당 채널을 악용하거나 용도 이외의 방법으로 사용하는 경우\n' +
+        '> 관련 규정에 따라 **제재 처리**될 수 있습니다.\n\n' +
+        '> 아래의 항목 중 해당되는 카테고리를 선택하여\n' +
+        '> 고객센터 문의를 시작해 주세요.'
       )
-      .setFooter({ text: 'StoryHUB • 24시간 운영' })
+      .setFooter({ text: 'Story HUB • 문의는 언제든지 환영합니다' })
       .setTimestamp();
 
     const selectMenu = new StringSelectMenuBuilder()
