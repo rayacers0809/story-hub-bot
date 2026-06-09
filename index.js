@@ -472,6 +472,18 @@ client.on('messageCreate', async (message) => {
         await channel.setRateLimitPerUser(seconds);
         await channel.send({ embeds: [new EmbedBuilder().setColor(0xf59e0b).setTitle('🐢 슬로우모드 설정').setDescription(seconds === 0 ? '슬로우모드가 **해제**되었습니다.' : `슬로우모드가 **${seconds}초**로 설정되었습니다.`).setFooter({ text: 'StoryHUB' }).setTimestamp()] });
       } catch (e) { await message.reply({ content: '⚠️ 슬로우모드 설정 실패: ' + e.message }); }
+      if (userId) {
+        try {
+          const user = await client.users.fetch(userId);
+          await user.send({ embeds: [new EmbedBuilder()
+            .setColor(0xf59e0b)
+            .setAuthor({ name: 'Story 고객센터', iconURL: client.user.displayAvatarURL() })
+            .setTitle('🐢 문의 대기 안내')
+            .setDescription('현재 문의가 많아 답변이 다소 늦어질 수 있습니다.\n잠시만 기다려 주시면 순서대로 답변드리겠습니다 🙏')
+            .setFooter({ text: 'StoryHUB' })
+            .setTimestamp()] });
+        } catch {}
+      }
       await message.react('🐢').catch(() => {});
       return;
     }
