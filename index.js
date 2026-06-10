@@ -828,20 +828,19 @@ async function closeTicket(channel, ticketId, member, interaction = null, messag
   if (closingSet.has(ticketId)) return;
   closingSet.add(ticketId);
 
+  // 1. 채널에 종료 메시지
   const closingEmbed = new EmbedBuilder()
     .setColor(0xef4444)
     .setTitle('🔒 티켓 종료 중')
-    .setDescription(`**${member.user.tag}** 님이 티켓을 종료합니다.\n잠시 후 채널이 삭제됩니다.`)
+    .setDescription(`**${member.user.tag}** 님이 티켓을 종료합니다.\n5초 후 채널이 삭제됩니다.`)
     .setTimestamp();
+  try {
+    if (interaction) await interaction.reply({ embeds: [closingEmbed] });
+    else await channel.send({ embeds: [closingEmbed] });
+  } catch {}
 
-  if (interaction) {
-    await interaction.reply({ embeds: [closingEmbed] });
-  } else if (message) {
-    await channel.send({ embeds: [closingEmbed] });
-  }
-
+  // 2. Firestore 업데이트
   const logUrl = `${config.WEB_BASE_URL}ticket/${ticketId}`;
-
   try {
     await getDb().collection('tickets').doc(ticketId).update({
       status: 'closed',
@@ -850,59 +849,50 @@ async function closeTicket(channel, ticketId, member, interaction = null, messag
       closedById: member.id,
       logUrl,
     });
-  } catch (e) {
-    console.error('티켓 종료 저장 실패:', e);
-  }
+  } catch (e) { console.error('티켓 종료 저장 실패:', e); }
 
+  // 3. dmMap에서 제거
   const userId = channel.topic?.match(/userId:(\d+)/)?.[1];
+  if (userId) dmMap.delete(userId);
 
-  if (userId) {
-    dmMap.delete(userId);
-  }
-
+  // 4. 고객 DM 전송
   if (userId) {
     try {
       const user = await client.users.fetch(userId);
+      await user.send({ embeds: [new EmbedBuilder()
+        .setColor(0x7c3aed)
+        .setTitle('✅ 문의 종료')
+        .setDescription('문의가 종료되었습니다.\n이용해주셔서 감사합니다 🩷')
+        .setFooter({ text: 'StoryHUB' })
+        .setTimestamp()] });
+    } catch (e) { console.error('유저 DM 전송 실패:', e.message); }
+  }
 
-      await user.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x7c3aed)
-            .setTitle('✅ 문의 종료')
-            .setDescription('문의가 종료되었습니다.\n이용해주셔서 감사합니다 🩷')
-            .setFooter({ text: 'StoryHUB' })
-            .setTimestamp(),
-        ],
-      });
+  // 5. 로그 채널 전송
+  const guild = channel.guild;
+  const logChannel = guild.channels.cache.get(config.LOG_CHANNEL_ID);
+  if (logChannel) {
+    try {
+      await logChannel.send({ embeds: [new EmbedBuilder()
+        .setColor(0xef4444)
+        .setTitle('🔒 티켓 종료 — 로그 저장됨')
+        .addFields(
+          { name: '📋 채널', value: channel.name, inline: true },
+          { name: '👤 닫은 사람', value: member.user.tag, inline: true },
+          { name: '🔗 로그 링크', value: logUrl, inline: false },
+        )
+        .setFooter({ text: 'StoryHUB' })
+        .setTimestamp()] });
     } catch {}
   }
 
-  const guild = channel.guild;
-  const logChannel = guild.channels.cache.get(config.LOG_CHANNEL_ID);
-
-  if (logChannel) {
-    logChannel.send({
-      embeds: [
-        new EmbedBuilder()
-          .setColor(0xef4444)
-          .setTitle('🔒 티켓 종료 — 로그 저장됨')
-          .addFields(
-            { name: '📋 채널', value: channel.name, inline: true },
-            { name: '👤 닫은 사람', value: member.user.tag, inline: true },
-            { name: '🔗 로그 링크', value: logUrl, inline: false },
-          )
-          .setFooter({ text: 'StoryHUB' })
-          .setTimestamp(),
-      ],
-    });
-  }
-
-  logAction(guild, '🔒 티켓 닫힘', null, 0xef4444, [
+  logAction(guild, `🔒 티켓 닫힘`, null, 0xef4444, [
     { name: '채널', value: channel.name, inline: true },
     { name: '닫은 사람', value: member.user.tag, inline: true },
     { name: '로그', value: logUrl, inline: false },
   ]);
 
+  // 6. 5초 후 채널 삭제
   setTimeout(() => channel.delete().catch(() => {}), 5000);
 }
 
