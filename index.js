@@ -232,7 +232,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     const safeName = member.user.username.toLowerCase().replace(/[^a-z0-9가-힣]/g, '').slice(0, 10) || 'user';
-    const channelName = `${option.channelPrefix}-${safeName}-${member.user.id.slice(-4)}`;
+    const channelName = `${option.channelPrefix}-${safeName}`;
     const ticketNum = String(ticketCounter).padStart(4, '0');
 
     const ticketChannel = await guild.channels.create({
@@ -705,16 +705,11 @@ client.on('messageCreate', async (message) => {
     try {
       const user = await client.users.fetch(userId);
       const fileAttachments = message.attachments.map(a => new AttachmentBuilder(a.url, { name: a.name }));
-
+      const staffLines = (message.content || '').split('\n').map(line =>
+        `[관리자] ${message.member.displayName}: ${line}`
+      ).join('\n');
       await user.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xa78bfa)
-            .setAuthor({ name: 'Story 고객센터', iconURL: client.user.displayAvatarURL() })
-            .setDescription(message.content || '(첨부파일)')
-            .setFooter({ text: 'StoryHUB • 이 메시지에 답장하면 스탭에게 전달됩니다' })
-            .setTimestamp(),
-        ],
+        content: staffLines || undefined,
         files: fileAttachments.length > 0 ? fileAttachments : [],
       });
 
