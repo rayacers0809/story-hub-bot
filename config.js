@@ -4,20 +4,16 @@ module.exports = {
   CLIENT_SECRET:           process.env.CLIENT_SECRET,
   PUBLIC_KEY:              process.env.PUBLIC_KEY,
   GUILD_ID:                process.env.GUILD_ID,
-
   TICKET_PANEL_CHANNEL_ID: process.env.TICKET_PANEL_CHANNEL_ID,
   LOG_CHANNEL_ID:          process.env.LOG_CHANNEL_ID,
   STAFF_ROLE_ID:           process.env.STAFF_ROLE_ID,
   STAFF_ROLE_ID2:          process.env.STAFF_ROLE_ID2,
   STAFF_ROLE_ID3:          process.env.STAFF_ROLE_ID3,
-
   CATEGORIES: {
     BUY:    process.env.CATEGORY_BUY,
     SERVER: process.env.CATEGORY_SERVER,
   },
-
   WEB_BASE_URL: process.env.WEB_BASE_URL,
-
   TICKET_OPTIONS: [
     {
       label: '구매 문의',
@@ -25,13 +21,15 @@ module.exports = {
       value: 'BUY',
       emoji: '🔒',
       categoryKey: 'BUY',
+      channelPrefix: '구매문의',
     },
     {
       label: '서버 문의',
-      description: '패치 관련 문의는 이 티켓을 이용해 주세요',
+      description: '서버 관련 문의는 이 티켓을 이용해 주세요',
       value: 'SERVER',
       emoji: '🔧',
       categoryKey: 'SERVER',
+      channelPrefix: '서버문의',
     },
   ],
 };
