@@ -231,8 +231,8 @@ client.on('interactionCreate', async (interaction) => {
       console.error('카운터 저장 실패:', e);
     }
 
-    const safeName = member.user.username.toLowerCase().replace(/[^a-z0-9가-힣]/g, '').slice(0, 12) || 'user';
-    const channelName = `${option.value.toLowerCase()}-${safeName}`;
+    const safeName = member.user.username.toLowerCase().replace(/[^a-z0-9가-힣]/g, '').slice(0, 10) || 'user';
+    const channelName = `${option.channelPrefix}-${safeName}-${member.user.id.slice(-4)}`;
     const ticketNum = String(ticketCounter).padStart(4, '0');
 
     const ticketChannel = await guild.channels.create({
