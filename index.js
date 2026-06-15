@@ -706,7 +706,7 @@ client.on('messageCreate', async (message) => {
       const user = await client.users.fetch(userId);
       const fileAttachments = message.attachments.map(a => new AttachmentBuilder(a.url, { name: a.name }));
       const staffLines = (message.content || '').split('\n').map(line =>
-        `[관리자] ${message.member.displayName}: ${line}`
+        `**[관리자] ${message.member.displayName}:** ${line}`
       ).join('\n');
       await user.send({
         content: staffLines || undefined,
