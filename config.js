@@ -9,27 +9,20 @@ module.exports = {
   STAFF_ROLE_ID:           process.env.STAFF_ROLE_ID,
   STAFF_ROLE_ID2:          process.env.STAFF_ROLE_ID2,
   STAFF_ROLE_ID3:          process.env.STAFF_ROLE_ID3,
-  CATEGORIES: {
-    BUY:    process.env.CATEGORY_BUY,
-    SERVER: process.env.CATEGORY_SERVER,
-  },
+
+  // 모든 문의가 들어올 단일 카테고리
+  TICKET_CATEGORY_ID: '1476939501933695190',
+
   WEB_BASE_URL: process.env.WEB_BASE_URL,
+
+  // 버튼 1개로 통합
   TICKET_OPTIONS: [
     {
-      label: '구매 문의',
-      description: '구매 문의는 이 티켓을 이용해 주세요',
-      value: 'BUY',
-      emoji: '🔒',
-      categoryKey: 'BUY',
-      channelPrefix: '구매문의',
-    },
-    {
-      label: '서버 문의',
-      description: '서버 관련 문의는 이 티켓을 이용해 주세요',
-      value: 'SERVER',
-      emoji: '🔧',
-      categoryKey: 'SERVER',
-      channelPrefix: '서버문의',
+      label: '문의하기',
+      description: '문의는 이 버튼을 이용해 주세요',
+      value: 'INQUIRY',
+      emoji: '📩',
+      channelPrefix: '문의',
     },
   ],
 };
