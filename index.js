@@ -207,11 +207,11 @@ client.on('interactionCreate', async (interaction) => {
 
     const guild = interaction.guild;
     const member = interaction.member;
-    const categoryId = config.CATEGORIES[option.categoryKey];
+    const categoryId = config.TICKET_CATEGORY_ID;
     const category = guild.channels.cache.get(categoryId);
 
     if (!category) {
-      return interaction.editReply({ content: `❌ \`${option.label}\` 카테고리를 찾을 수 없습니다.` });
+      return interaction.editReply({ content: `❌ 문의 카테고리를 찾을 수 없습니다. (ID: ${categoryId})` });
     }
 
     if (dmMap.has(member.id)) {
