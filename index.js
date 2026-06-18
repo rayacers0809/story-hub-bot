@@ -832,3 +832,13 @@ async function logAction(guild, title, description, color, fields = []) {
 }
 
 client.login(config.TOKEN);
+
+
+// 에러 핸들러 (봇 크래시 방지)
+client.on('error', (error) => {
+  console.error('Discord 클라이언트 에러:', error.message);
+});
+
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled Rejection:', error.message);
+});
