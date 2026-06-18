@@ -34,7 +34,7 @@ module.exports = {
       label: '스태프 지원',
       description: '스태프 지원 문의는 이 티켓을 이용해 주세요',
       value: 'SERVER',
-      emoji: '⭐',
+      emoji: '💼',
       channelPrefix: '스태프지원',
     },
   ],
