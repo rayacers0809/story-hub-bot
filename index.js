@@ -97,6 +97,21 @@ client.once('clientReady', async () => {
   } catch (e) {
     console.error('카운터 복원 실패:', e.message);
   }
+
+  // 봇 재시작 시 열린 티켓 dmMap 복원
+  try {
+    const db = getDb();
+    const openTickets = await db.collection('tickets').where('status', '==', 'open').get();
+    openTickets.forEach(doc => {
+      const t = doc.data();
+      if (t.userId && t.channelId) {
+        dmMap.set(t.userId, { ticketId: t.ticketId, channelId: t.channelId, type: t.type, typeLabel: t.typeLabel });
+      }
+    });
+    console.log(`📋 열린 티켓 복원: ${openTickets.size}개`);
+  } catch (e) {
+    console.error('티켓 복원 실패:', e.message);
+  }
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -127,6 +142,7 @@ client.on('interactionCreate', async (interaction) => {
       new ButtonBuilder()
         .setCustomId(`ticket_btn:${opt.value}`)
         .setLabel(opt.label)
+        .setEmoji(opt.emoji)
         .setStyle(ButtonStyle.Primary)
     );
 
@@ -314,7 +330,7 @@ client.on('interactionCreate', async (interaction) => {
     try {
       const dmEmbed = new EmbedBuilder()
         .setColor(0x7c3aed)
-        .setTitle(`${option.emoji} ${option.label} 문의 접수`)
+        .setTitle(`${option.label} 문의 접수`)
         .setDescription(
           `안녕하세요 **${member.displayName}**님!\n\n` +
           `**[${option.label}]** 문의가 접수되었습니다 🩷\n\n` +
@@ -425,7 +441,7 @@ async function sendStaffGuide(ticketChannel, member, option, ticketNum, ticketId
 
   const staffEmbed = new EmbedBuilder()
     .setColor(0x7c3aed)
-    .setTitle(`${option.emoji} ${option.label} 티켓 #${ticketNum}`)
+    .setTitle(`${option.label} 티켓 #${ticketNum}`)
     .setDescription(
       `<@&${config.STAFF_ROLE_ID}> 새 문의가 접수되었습니다.\n\n` +
       `> 이 채널에서 답변을 입력하면 유저의 DM으로 자동 전달됩니다.`
@@ -832,13 +848,3 @@ async function logAction(guild, title, description, color, fields = []) {
 }
 
 client.login(config.TOKEN);
-
-
-// 에러 핸들러 (봇 크래시 방지)
-client.on('error', (error) => {
-  console.error('Discord 클라이언트 에러:', error.message);
-});
-
-process.on('unhandledRejection', (error) => {
-  console.error('Unhandled Rejection:', error.message);
-});
