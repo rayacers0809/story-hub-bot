@@ -10,7 +10,6 @@ module.exports = {
   STAFF_ROLE_ID2:          process.env.STAFF_ROLE_ID2,
   STAFF_ROLE_ID3:          process.env.STAFF_ROLE_ID3,
 
-  // 구매문의/서버문의 전부 이 카테고리로 들어옴
   TICKET_CATEGORY_ID: '1476939501933695190',
 
   WEB_BASE_URL: process.env.WEB_BASE_URL,
@@ -26,7 +25,7 @@ module.exports = {
     {
       label: '관리팀 지원',
       description: '스태프 지원 문의는 이 티켓을 이용해 주세요',
-      value: 'SERVER',
+      value: 'MANAGE',
       emoji: '💼',
       channelPrefix: '관리팀지원',
     },
