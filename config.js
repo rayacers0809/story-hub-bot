@@ -24,18 +24,18 @@ module.exports = {
       channelPrefix: '구매문의',
     },
     {
+      label: '관리팀 지원',
+      description: '스태프 지원 문의는 이 티켓을 이용해 주세요',
+      value: 'SERVER',
+      emoji: '💼',
+      channelPrefix: '관리팀지원',
+    },
+    {
       label: '서버 문의',
       description: '서버 관련 문의는 이 티켓을 이용해 주세요',
       value: 'SERVER',
       emoji: '🔧',
       channelPrefix: '서버문의',
-    },
-    {
-      label: '스태프 지원',
-      description: '스태프 지원 문의는 이 티켓을 이용해 주세요',
-      value: 'SERVER',
-      emoji: '💼',
-      channelPrefix: '스태프지원',
     },
   ],
 };
