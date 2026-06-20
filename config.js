@@ -22,7 +22,7 @@ module.exports = {
       channelPrefix: '구매문의',
     },
     {
-      label: '외주문의-수콩',
+      label: '외주(커스텀)',
       description: '외주 및 커스텀 문의는 이 티켓을 이용해 주세요',
       value: 'MANAGE',
       channelPrefix: '외주문의',
