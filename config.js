@@ -22,10 +22,10 @@ module.exports = {
       channelPrefix: '구매문의',
     },
     {
-      label: '관리팀 지원',
-      description: '스태프 지원 문의는 이 티켓을 이용해 주세요',
+      label: '외주 (커스텀)',
+      description: '외주 및 커스텀 문의는 이 티켓을 이용해 주세요',
       value: 'MANAGE',
-      channelPrefix: '관리팀지원',
+      channelPrefix: '외주커스텀',
     },
     {
       label: '서버 문의',
